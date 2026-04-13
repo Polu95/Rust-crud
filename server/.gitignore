@@ -1,0 +1,29 @@
+# Rust build artifacts
+/target/
+/server/target/
+**/*.rs.bk
+*.pdb
+
+# Environment / secrets
+.env
+.env.local
+*.env
+
+# Database files (if using SQLite)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
