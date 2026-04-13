@@ -2,28 +2,33 @@ use axum::{
     routing::{get, post, put, delete},
     Router,
     Json,
-    extract::Path,
+    extract::{Path, State},
 };
 
-use mongodb::bson::{doc, oid::ObjectId};
+use mongodb::{Database, bson::{doc, oid::ObjectId}};
 use futures::stream::TryStreamExt;
 
-use crate::{models::User, db::connect_db};
+use crate::models::User;
 
-pub fn user_routes() -> Router {
+pub fn user_routes(db: Database) -> Router {
     Router::new()
         .route("/users", post(create_user))
         .route("/users", get(get_users))
         .route("/users/:id", put(update_user))
         .route("/users/:id", delete(delete_user))
+        .with_state(db)
 }
 
-async fn create_user(Json(user): Json<User>) -> Json<User> {
-    let db = connect_db().await;
+async fn create_user(
+    State(db): State<Database>,
+    Json(user): Json<User>,
+) -> Json<User> {
     let collection = db.collection::<User>("users");
 
     let mut new_user = user;
     new_user.id = None;
+    let name = new_user.name.clone();
+    let email = new_user.email.clone();
 
     let result = collection
         .insert_one(new_user, None)
@@ -32,13 +37,12 @@ async fn create_user(Json(user): Json<User>) -> Json<User> {
 
     Json(User {
         id: result.inserted_id.as_object_id(),
-        name: "".to_string(),
-        email: "".to_string(),
+        name,
+        email,
     })
 }
 
-async fn get_users() -> Json<Vec<User>> {
-    let db = connect_db().await;
+async fn get_users(State(db): State<Database>) -> Json<Vec<User>> {
     let collection = db.collection::<User>("users");
 
     let mut cursor = collection
@@ -56,10 +60,10 @@ async fn get_users() -> Json<Vec<User>> {
 }
 
 async fn update_user(
+    State(db): State<Database>,
     Path(id): Path<String>,
     Json(user): Json<User>,
 ) -> Json<&'static str> {
-    let db = connect_db().await;
     let collection = db.collection::<User>("users");
 
     let obj_id = ObjectId::parse_str(id).unwrap();
@@ -82,9 +86,9 @@ async fn update_user(
 }
 
 async fn delete_user(
+    State(db): State<Database>,
     Path(id): Path<String>,
 ) -> Json<&'static str> {
-    let db = connect_db().await;
     let collection = db.collection::<User>("users");
 
     let obj_id = ObjectId::parse_str(id).unwrap();
